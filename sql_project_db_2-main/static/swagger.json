@@ -1,0 +1,82 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "Hotel Booking Management System API",
+    "description": "CRUD APIs for all tables"
+  },
+  "basePath": "/",
+  "schemes": ["http"],
+  "paths": {
+    "/users": {
+      "get": {"summary": "Get all users","responses":{"200":{"description":"List of users"}}},
+      "post": {
+        "summary": "Add a new user",
+        "parameters":[
+          {"name":"body","in":"body","required":true,"schema":{"type":"object","properties":{"name":{"type":"string"},"email":{"type":"string"},"password":{"type":"string"},"phone":{"type":"string"}},"required":["name","email","password"]}}
+        ],
+        "responses":{"201":{"description":"User added"}}
+      }
+    },
+    "/users/{user_id}": {
+      "get":{"summary":"Get single user","parameters":[{"name":"user_id","in":"path","required":true,"type":"integer"}],"responses":{"200":{"description":"User details"}}},
+      "put":{"summary":"Update user","parameters":[{"name":"user_id","in":"path","required":true,"type":"integer"},{"name":"body","in":"body","required":true,"schema":{"type":"object","properties":{"name":{"type":"string"},"email":{"type":"string"},"password":{"type":"string"},"phone":{"type":"string"}}}}],"responses":{"200":{"description":"User updated"}}},
+      "delete":{"summary":"Delete user","parameters":[{"name":"user_id","in":"path","required":true,"type":"integer"}],"responses":{"200":{"description":"User deleted"}}}
+    },
+    "/rooms": {
+      "get":{"summary":"Get all rooms","responses":{"200":{"description":"List of rooms"}}},
+      "post":{"summary":"Add a room","parameters":[{"name":"body","in":"body","required":true,"schema":{"type":"object","properties":{"room_number":{"type":"string"},"room_type":{"type":"string"},"price":{"type":"number"},"status":{"type":"string"},"description":{"type":"string"}}}}],"responses":{"201":{"description":"Room added"}}}
+    },
+    "/rooms/{room_id}": {
+      "get":{"summary":"Get room details","parameters":[{"name":"room_id","in":"path","required":true,"type":"integer"}],"responses":{"200":{"description":"Room details"}}},
+      "put":{"summary":"Update room","parameters":[{"name":"room_id","in":"path","required":true,"type":"integer"},{"name":"body","in":"body","required":true,"schema":{"type":"object","properties":{"room_number":{"type":"string"},"room_type":{"type":"string"},"price":{"type":"number"},"status":{"type":"string"},"description":{"type":"string"}}}}],"responses":{"200":{"description":"Room updated"}}},
+      "delete":{"summary":"Delete room","parameters":[{"name":"room_id","in":"path","required":true,"type":"integer"}],"responses":{"200":{"description":"Room deleted"}}}
+    },
+    "/bookings": {
+      "get":{"summary":"Get all bookings","responses":{"200":{"description":"List of bookings"}}},
+      "post":{"summary":"Add booking","parameters":[{"name":"body","in":"body","required":true,"schema":{"type":"object","properties":{"user_id":{"type":"integer"},"room_id":{"type":"integer"},"check_in":{"type":"string"},"check_out":{"type":"string"},"booking_status":{"type":"string"},"arrival_status":{"type":"string"}}}}],"responses":{"201":{"description":"Booking added"}}}
+    },
+    "/bookings/{booking_id}": {
+      "get":{"summary":"Get booking","parameters":[{"name":"booking_id","in":"path","required":true,"type":"integer"}],"responses":{"200":{"description":"Booking details"}}},
+      "put":{"summary":"Update booking","parameters":[{"name":"booking_id","in":"path","required":true,"type":"integer"},{"name":"body","in":"body","required":true,"schema":{"type":"object","properties":{"user_id":{"type":"integer"},"room_id":{"type":"integer"},"check_in":{"type":"string"},"check_out":{"type":"string"},"booking_status":{"type":"string"},"arrival_status":{"type":"string"}}}}],"responses":{"200":{"description":"Booking updated"}}},
+      "delete":{"summary":"Delete booking","parameters":[{"name":"booking_id","in":"path","required":true,"type":"integer"}],"responses":{"200":{"description":"Booking deleted"}}}
+    },
+    "/payments": {
+      "get":{"summary":"Get all payments","responses":{"200":{"description":"List of payments"}}},
+      "post":{"summary":"Add payment","parameters":[{"name":"body","in":"body","required":true,"schema":{"type":"object","properties":{"booking_id":{"type":"integer"},"amount":{"type":"number"},"payment_method":{"type":"string"},"payment_status":{"type":"string"}}}}],"responses":{"201":{"description":"Payment added"}}}
+    },
+    "/payments/{payment_id}": {
+      "get":{"summary":"Get payment","parameters":[{"name":"payment_id","in":"path","required":true,"type":"integer"}],"responses":{"200":{"description":"Payment details"}}},
+      "put":{"summary":"Update payment","parameters":[{"name":"payment_id","in":"path","required":true,"type":"integer"},{"name":"body","in":"body","required":true,"schema":{"type":"object","properties":{"booking_id":{"type":"integer"},"amount":{"type":"number"},"payment_method":{"type":"string"},"payment_status":{"type":"string"}}}}],"responses":{"200":{"description":"Payment updated"}}},
+      "delete":{"summary":"Delete payment","parameters":[{"name":"payment_id","in":"path","required":true,"type":"integer"}],"responses":{"200":{"description":"Payment deleted"}}}
+    },
+    "/reviews": {
+      "get":{"summary":"Get all reviews","responses":{"200":{"description":"List of reviews"}}},
+      "post":{"summary":"Add review","parameters":[{"name":"body","in":"body","required":true,"schema":{"type":"object","properties":{"user_id":{"type":"integer"},"room_id":{"type":"integer"},"rating":{"type":"number"},"comment":{"type":"string"}}}}],"responses":{"201":{"description":"Review added"}}}
+    },
+    "/reviews/{review_id}": {
+      "get":{"summary":"Get review","parameters":[{"name":"review_id","in":"path","required":true,"type":"integer"}],"responses":{"200":{"description":"Review details"}}},
+      "put":{"summary":"Update review","parameters":[{"name":"review_id","in":"path","required":true,"type":"integer"},{"name":"body","in":"body","required":true,"schema":{"type":"object","properties":{"user_id":{"type":"integer"},"room_id":{"type":"integer"},"rating":{"type":"number"},"comment":{"type":"string"}}}}],"responses":{"200":{"description":"Review updated"}}},
+      "delete":{"summary":"Delete review","parameters":[{"name":"review_id","in":"path","required":true,"type":"integer"}],"responses":{"200":{"description":"Review deleted"}}}
+    },
+    "/features": {
+      "get":{"summary":"Get all room features","responses":{"200":{"description":"List of features"}}},
+      "post":{"summary":"Add feature","parameters":[{"name":"body","in":"body","required":true,"schema":{"type":"object","properties":{"name":{"type":"string"}}}}],"responses":{"201":{"description":"Feature added"}}}
+    },
+    "/features/{feature_id}": {
+      "put":{"summary":"Update feature","parameters":[{"name":"feature_id","in":"path","required":true,"type":"integer"},{"name":"body","in":"body","required":true,"schema":{"type":"object","properties":{"name":{"type":"string"}}}}],"responses":{"200":{"description":"Feature updated"}}},
+      "delete":{"summary":"Delete feature","parameters":[{"name":"feature_id","in":"path","required":true,"type":"integer"}],"responses":{"200":{"description":"Feature deleted"}}}
+    },
+    "/services": {
+      "get":{"summary":"Get all services","responses":{"200":{"description":"List of services"}}},
+      "post":{"summary":"Add service","parameters":[{"name":"body","in":"body","required":true,"schema":{"type":"object","properties":{"name":{"type":"string"}}}}],"responses":{"201":{"description":"Service added"}}}
+    },
+    "/services/{service_id}": {
+      "put":{"summary":"Update service","parameters":[{"name":"service_id","in":"path","required":true,"type":"integer"},{"name":"body","in":"body","required":true,"schema":{"type":"object","properties":{"name":{"type":"string"}}}}],"responses":{"200":{"description":"Service updated"}}},
+      "delete":{"summary":"Delete service","parameters":[{"name":"service_id","in":"path","required":true,"type":"integer"}],"responses":{"200":{"description":"Service deleted"}}}
+    },
+    "/settings": {
+      "get":{"summary":"Get system settings","responses":{"200":{"description":"List of settings"}}}
+    }
+  }
+}

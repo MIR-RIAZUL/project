@@ -104,46 +104,53 @@ function App() {
 
   return (
     <div className="App">
+      {/* Header */}
+      <header className="header">
+        <div className="logo">
+          <span className="logo-icon">🏨</span>
+          <span>Hotel Booking</span>
+        </div>
+        <div className="header-links">
+          <a href="#" className="header-link">List your property</a>
+          <a href="#" className="header-link">Support</a>
+        </div>
+        <div className="header-user">
+          {user ? (
+            <div className="user-info">
+              <span className="user-name">Hi, {user.name || user.username}</span>
+              <button onClick={handleLogout} className="btn btn-secondary">Logout</button>
+            </div>
+          ) : (
+            <button onClick={() => setCurrentPage('login')} className="btn btn-primary">Sign In</button>
+          )}
+        </div>
+      </header>
+
       {/* Dark Mode Toggle Button */}
       <button 
         onClick={toggleDarkMode}
         className="theme-toggle"
-        style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          zIndex: '1000',
-          background: darkMode ? '#5d6d7e' : '#667eea',
-          color: 'white',
-          border: 'none',
-          borderRadius: '50%',
-          width: '40px',
-          height: '40px',
-          fontSize: '18px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
       >
         {darkMode ? '☀️' : '🌙'}
       </button>
       
-      {currentPage === 'home' && (
-        <Home onLoginRedirect={handleLoginRedirect} />
-      )}
-      {currentPage === 'login' && (
-        <Login onLogin={handleLogin} />
-      )}
-      {currentPage === 'register' && (
-        <Register onRegister={handleRegister} />
-      )}
-      {currentPage === 'user' && user && user.type === 'user' && (
-        <UserDashboard user={user} onLogout={handleLogout} />
-      )}
-      {currentPage === 'admin' && user && user.type === 'admin' && (
-        <AdminDashboard user={user} onLogout={handleLogout} />
-      )}
+      <div className="main-content">
+        {currentPage === 'home' && (
+          <Home onLoginRedirect={handleLoginRedirect} />
+        )}
+        {currentPage === 'login' && (
+          <Login onLogin={handleLogin} />
+        )}
+        {currentPage === 'register' && (
+          <Register onRegister={handleRegister} />
+        )}
+        {currentPage === 'user' && user && user.type === 'user' && (
+          <UserDashboard user={user} onLogout={handleLogout} />
+        )}
+        {currentPage === 'admin' && user && user.type === 'admin' && (
+          <AdminDashboard user={user} onLogout={handleLogout} />
+        )}
+      </div>
     </div>
   );
 }

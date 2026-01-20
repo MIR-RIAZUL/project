@@ -1,11 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import './App.css';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-// Components
-import Login from './components/Login';
-import Dashboard from './components/Dashboard';
+const AuthContext = createContext();
 
-function App() {
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,36 +31,28 @@ function App() {
     setLoading(false);
   }, []);
 
-  const handleLogin = (userData, token) => {
+  const login = (userData, token) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
   };
 
-  const handleLogout = () => {
+  const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
   };
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Loading...</p>
-      </div>
-    );
-  }
+  const value = {
+    user,
+    login,
+    logout,
+    loading
+  };
 
   return (
-    <div className="App">
-      {!user ? (
-        <Login onLogin={handleLogin} />
-      ) : (
-        <Dashboard user={user} onLogout={handleLogout} />
-      )}
-    </div>
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
   );
-}
-
-export default App;
+};

@@ -17,7 +17,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 100vh;
   padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 /* Loading Styles */
@@ -162,6 +164,17 @@ body {
   color: #718096;
   font-size: 14px;
   font-style: italic;
+}
+
+.link {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.link:hover {
+  text-decoration: underline;
+  color: #764ba2;
 }
 
 /* Dashboard Styles */

@@ -8,7 +8,7 @@ cursor.execute("PRAGMA foreign_keys = ON")
 
 # ================= ADMINS =================
 cursor.executemany("""
-INSERT INTO admins (username, password, role)
+INSERT OR IGNORE INTO admins (username, password, role)
 VALUES (?, ?, ?)
 """, [
     ("admin", "admin123", "super_admin"),

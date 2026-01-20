@@ -2,15 +2,13 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 
 // Components
-import Home from './components/Home';
 import Login from './components/Login';
 import Register from './components/Register';
-import UserDashboard from './components/UserDashboard';
-import AdminDashboard from './components/AdminDashboard';
+import Dashboard from './components/Dashboard';
 
 function App() {
   const [user, setUser] = useState(null);
-  const [currentPage, setCurrentPage] = useState('home'); // 'home', 'login', 'register', 'user', 'admin'
+  const [currentPage, setCurrentPage] = useState('login'); // 'login', 'register', or 'dashboard'
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,11 +20,7 @@ function App() {
       try {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
-        if (parsedUser.type === 'admin') {
-          setCurrentPage('admin');
-        } else {
-          setCurrentPage('user');
-        }
+        setCurrentPage('dashboard');
       } catch {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -39,25 +33,17 @@ function App() {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
-    if (userData.type === 'admin') {
-      setCurrentPage('admin');
-    } else {
-      setCurrentPage('user');
-    }
+    setCurrentPage('dashboard');
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    setCurrentPage('home');
-  };
-
-  const handleRegister = () => {
     setCurrentPage('login');
   };
 
-  const handleLoginRedirect = () => {
+  const handleRegister = () => {
     setCurrentPage('login');
   };
 
@@ -72,20 +58,14 @@ function App() {
 
   return (
     <div className="App">
-      {currentPage === 'home' && (
-        <Home onLoginRedirect={handleLoginRedirect} />
-      )}
       {currentPage === 'login' && (
         <Login onLogin={handleLogin} />
       )}
       {currentPage === 'register' && (
         <Register onRegister={handleRegister} />
       )}
-      {currentPage === 'user' && user && user.type === 'user' && (
-        <UserDashboard user={user} onLogout={handleLogout} />
-      )}
-      {currentPage === 'admin' && user && user.type === 'admin' && (
-        <AdminDashboard user={user} onLogout={handleLogout} />
+      {currentPage === 'dashboard' && user && (
+        <Dashboard user={user} onLogout={handleLogout} />
       )}
     </div>
   );

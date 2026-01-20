@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 
-const Login = ({ onLogin }) => {
+const Register = ({ onRegister }) => {
   const [formData, setFormData] = useState({
-    username: '',
+    name: '',
+    email: '',
     password: '',
-    user_type: 'user'
+    phone: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -22,7 +23,7 @@ const Login = ({ onLogin }) => {
     setError('');
     
     try {
-      const response = await fetch('http://127.0.0.1:5000/auth/login', {
+      const response = await fetch('http://127.0.0.1:5000/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -33,12 +34,13 @@ const Login = ({ onLogin }) => {
       const data = await response.json();
       
       if (response.ok) {
-        onLogin(data.user, data.token);
+        alert('Registration successful! Please log in with your credentials.');
+        onRegister();
       } else {
-        setError(data.error || 'Login failed');
+        setError(data.error || 'Registration failed');
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Registration error:', error);
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
@@ -48,32 +50,40 @@ const Login = ({ onLogin }) => {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h2>Welcome to Hotel Booking System</h2>
+        <h2>Create Account</h2>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="user_type">Login As:</label>
-            <select
-              name="user_type"
-              value={formData.user_type}
-              onChange={handleChange}
-              className="form-control"
-            >
-              <option value="user">Guest/User</option>
-              <option value="admin">Administrator</option>
-            </select>
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="username">
-              {formData.user_type === 'admin' ? 'Username' : 'Email'}
-            </label>
+            <label htmlFor="name">Full Name</label>
             <input
-              type={formData.user_type === 'admin' ? 'text' : 'email'}
-              name="username"
-              value={formData.username}
+              type="text"
+              name="name"
+              value={formData.name}
               onChange={handleChange}
               className="form-control"
               required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="form-control"
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="phone">Phone (Optional)</label>
+            <input
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              className="form-control"
             />
           </div>
           
@@ -86,6 +96,7 @@ const Login = ({ onLogin }) => {
               onChange={handleChange}
               className="form-control"
               required
+              minLength="6"
             />
           </div>
           
@@ -96,17 +107,16 @@ const Login = ({ onLogin }) => {
             className="btn btn-primary"
             disabled={loading}
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Creating Account...' : 'Register'}
           </button>
         </form>
         
         <div className="login-footer">
-          <p>Admin Credentials: admin / admin123</p>
-          <p>Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); window.location.href = '/register'; }} className="link">Register here</a></p>
+          <p>Already have an account? <a href="/login" className="link">Login here</a></p>
         </div>
       </div>
     </div>
   );
 };
 
-export default Login;
+export default Register;

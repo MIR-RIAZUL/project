@@ -19,6 +19,8 @@ function App() {
     if (token && userData) {
       try {
         const parsedUser = JSON.parse(userData);
+        // Setting state to restore authentication from localStorage on mount is a legitimate use case
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setUser(parsedUser);
         setCurrentPage('dashboard');
       } catch {

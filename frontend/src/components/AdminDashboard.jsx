@@ -18,7 +18,7 @@ const AdminDashboard = ({ user, onLogout }) => {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab]);
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = async () => {
     setLoading(true);

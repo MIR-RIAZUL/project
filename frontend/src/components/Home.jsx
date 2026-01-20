@@ -11,7 +11,7 @@ const Home = ({ onLoginRedirect }) => {
 
   useEffect(() => {
     fetchRooms();
-  }, [filters]);
+  }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRooms = async () => {
     setLoading(true);

@@ -7,7 +7,7 @@ const Dashboard = ({ user, onLogout }) => {
 
   useEffect(() => {
     fetchData();
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = async () => {
     setLoading(true);

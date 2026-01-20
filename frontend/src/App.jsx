@@ -9,18 +9,16 @@ import "./App.css";
 function App() {
   return (
     <div className="App">
-      <h1>Hotel Booking Management System</h1>
-      <hr />
-      <h2>Users</h2>
-      <Users />
-      <h2>Rooms</h2>
-      <Rooms />
-      <h2>Bookings</h2>
-      <Bookings />
-      <h2>Reviews</h2>
-      <Reviews />
-      <h2>Payments</h2>
-      <Payments />
+      <header style={{ backgroundColor: '#282c34', padding: '20px', textAlign: 'center' }}>
+        <h1 style={{ color: 'white', margin: 0 }}>Hotel Booking Management System</h1>
+      </header>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
+        <Users />
+        <Rooms />
+        <Bookings />
+        <Reviews />
+        <Payments />
+      </div>
     </div>
   );
 }

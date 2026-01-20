@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
 from flask_swagger_ui import get_swaggerui_blueprint
+from flask_cors import CORS
 import sqlite3
 
 app = Flask(__name__, static_folder='static')
+CORS(app)  # Enable CORS for all routes
 
 # ---------------- Database connection ----------------
 def get_db():

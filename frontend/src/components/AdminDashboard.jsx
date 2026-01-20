@@ -13,6 +13,7 @@ const AdminDashboard = ({ user, onLogout }) => {
     room_type: '',
     price: '',
     description: '',
+    photo_url: '',
     status: 'Available'
   });
 
@@ -108,7 +109,8 @@ const AdminDashboard = ({ user, onLogout }) => {
         },
         body: JSON.stringify({
           ...roomForm,
-          price: parseFloat(roomForm.price)
+          price: parseFloat(roomForm.price),
+          photo_url: roomForm.photo_url
         })
       });
       
@@ -333,6 +335,19 @@ const AdminDashboard = ({ user, onLogout }) => {
             />
           </div>
           
+          <div className="form-group">
+            <label htmlFor="photo_url">Photo URL</label>
+            <input
+              type="text"
+              name="photo_url"
+              value={roomForm.photo_url}
+              onChange={(e) => setRoomForm({...roomForm, photo_url: e.target.value})}
+              className="form-control"
+              placeholder="Enter URL to room photo (optional)"
+            />
+            <small className="form-hint">Provide a URL to an image of the room (e.g., https://example.com/room.jpg)</small>
+          </div>
+          
           {error && <div className="error-message">{error}</div>}
           
           <button 
@@ -360,6 +375,11 @@ const AdminDashboard = ({ user, onLogout }) => {
                   </span>
                 </div>
                 <div className="room-details">
+                  {room.photo_url && (
+                    <div className="room-photo">
+                      <img src={room.photo_url} alt={`Room ${room.room_number}`} className="room-image" />
+                    </div>
+                  )}
                   <p><strong>Type:</strong> {room.room_type}</p>
                   <p><strong>Price:</strong> ${room.price}</p>
                   <p><strong>Description:</strong> {room.description || '-'}</p>

@@ -305,11 +305,29 @@ def create_user_booking():
         
         db = get_db()
         
-        # Check if room exists and is available
-        room = db.execute("SELECT * FROM rooms WHERE room_id = ? AND status = 'Available'", (room_id,)).fetchone()
+        # Check if room exists
+        room = db.execute("SELECT * FROM rooms WHERE room_id = ?", (room_id,)).fetchone()
         if not room:
             db.close()
-            return jsonify({'error': 'Room not available'}), 400
+            return jsonify({'error': 'Room does not exist'}), 400
+        
+        # Check if room is already booked for the requested dates
+        existing_booking = db.execute("""
+            SELECT * FROM bookings 
+            WHERE room_id = ? 
+            AND booking_status != 'Cancelled'
+            AND check_in < ?
+            AND check_out > ?
+        """, (room_id, check_out, check_in)).fetchone()
+        
+        if existing_booking:
+            db.close()
+            return jsonify({'error': 'Room is already booked for the selected dates'}), 400
+        
+        # Check if room is marked as unavailable
+        if room['status'] != 'Available':
+            db.close()
+            return jsonify({'error': 'Room is not available'}), 400
         
         # Create booking
         db.execute("""

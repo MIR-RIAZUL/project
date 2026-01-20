@@ -10,7 +10,7 @@ import AdminDashboard from './components/AdminDashboard';
 
 function App() {
   const [user, setUser] = useState(null);
-  const [currentPage, setCurrentPage] = useState('home'); // 'home', 'login', 'register', 'user', 'admin'
+  const [currentPage, setCurrentPage] = useState('login'); // 'home', 'login', 'register', 'user', 'admin'
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

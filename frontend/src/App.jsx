@@ -36,6 +36,10 @@ function App() {
   }, []);
 
   const handleLogin = (userData, token) => {
+    if (token === 'REGISTER_MODE') {
+      setCurrentPage('register');
+      return;
+    }
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);

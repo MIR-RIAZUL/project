@@ -102,7 +102,7 @@ const Login = ({ onLogin }) => {
         
         <div className="login-footer">
           <p>Admin Credentials: admin / admin123</p>
-          <p>Don't have an account? <a href="#" onClick={(e) => { e.preventDefault(); window.location.href = '/register'; }} className="link">Register here</a></p>
+          <p>Don't have an account? <button type="button" onClick={() => onLogin(null, 'REGISTER_MODE')} className="link">Register here</button></p>
         </div>
       </div>
     </div>

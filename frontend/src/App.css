@@ -20,6 +20,69 @@ body {
   min-height: 100vh;
   padding: 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+}
+
+/* Animated elements for login page */
+.login-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(45deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+  clip-path: polygon(20% 0%, 100% 0%, 100% 100%, 0% 100%);
+  animation: float 6s ease-in-out infinite;
+}
+
+.login-card {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+/* Additional floating animation for visual elements */
+.login-container {
+  overflow: hidden;
+}
+
+.login-container::after {
+  content: '';
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  top: 20%;
+  right: 10%;
+  animation: drift 8s linear infinite;
+}
+
+@keyframes drift {
+  0% {
+    transform: translate(0, 0);
+  }
+  33% {
+    transform: translate(-20px, -20px);
+  }
+  66% {
+    transform: translate(10px, 15px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
 }
 
 /* Loading Styles */

@@ -10,7 +10,7 @@ import AdminDashboard from './components/AdminDashboard';
 
 function App() {
   const [user, setUser] = useState(null);
-  const [currentPage, setCurrentPage] = useState('login'); // 'home', 'login', 'register', 'user', 'admin'
+  const [currentPage, setCurrentPage] = useState('home'); // 'home', 'login', 'register', 'user', 'admin'
   const [loading, setLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(false); // Add dark mode state
 
@@ -105,19 +105,20 @@ function App() {
   return (
     <div className="App">
       {/* Header */}
-      <header className="header">
-        <div className="logo">
-          <span className="logo-icon">🏨</span>
-          <span>Hotel Booking</span>
+      <header className="booking-header">
+        <div className="booking-logo">
+          <span className="booking-logo-icon">🏨</span>
+          <span>BookingPro</span>
         </div>
-        <div className="header-links">
-          <a href="#" className="header-link">List your property</a>
-          <a href="#" className="header-link">Support</a>
+        <div className="booking-header-links">
+          <a href="#" className="booking-header-link">List your property</a>
+          <a href="#" className="booking-header-link">Support</a>
+          <a href="#" className="booking-header-link">Deals</a>
         </div>
-        <div className="header-user">
+        <div className="booking-header-user">
           {user ? (
-            <div className="user-info">
-              <span className="user-name">Hi, {user.name || user.username}</span>
+            <div className="booking-user-info">
+              <span className="booking-user-name">Hi, {user.name || user.username}</span>
               <button onClick={handleLogout} className="btn btn-secondary">Logout</button>
             </div>
           ) : (

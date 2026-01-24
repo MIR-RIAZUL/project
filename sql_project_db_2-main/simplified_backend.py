@@ -139,10 +139,179 @@ def admin_dashboard(payload):
             "total_bookings": db.execute("SELECT COUNT(*) as count FROM bookings").fetchone()['count'],
             "pending_bookings": db.execute("SELECT COUNT(*) as count FROM bookings WHERE booking_status = 'Pending'").fetchone()['count'],
             "confirmed_bookings": db.execute("SELECT COUNT(*) as count FROM bookings WHERE booking_status = 'Confirmed'").fetchone()['count'],
-            "total_revenue": db.execute("SELECT SUM(amount) as total FROM payments WHERE payment_status = 'Completed'").fetchone()['total'] or 0
+            "cancelled_bookings": db.execute("SELECT COUNT(*) as count FROM bookings WHERE booking_status = 'Cancelled'").fetchone()['count'],
+            "total_revenue": db.execute("SELECT SUM(amount) as total FROM payments WHERE payment_status = 'Completed'").fetchone()['total'] or 0,
+            "total_revenue_today": db.execute("SELECT SUM(amount) as total FROM payments WHERE payment_status = 'Completed' AND DATE(payment_date) = DATE('now')").fetchone()['total'] or 0,
+            "bookings_today": db.execute("SELECT COUNT(*) as count FROM bookings WHERE DATE(created_at) = DATE('now')").fetchone()['count'],
+            "active_users": db.execute("SELECT COUNT(DISTINCT user_id) as count FROM bookings WHERE booking_status = 'Confirmed'").fetchone()['count'],
+            "occupancy_rate": round(db.execute("""
+                SELECT CAST(SUM(CASE WHEN status = 'Occupied' THEN 1 ELSE 0 END) AS FLOAT) * 100 / COUNT(*) as rate
+                FROM rooms
+            """).fetchone()['rate'] or 0, 2)
         }
         db.close()
         return jsonify(stats), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/admin/analytics", methods=["GET"])
+@token_required
+def admin_analytics(payload):
+    if payload['type'] != 'admin':
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    try:
+        db = get_db()
+        
+        # Get booking trends for the last 30 days
+        booking_trends = db.execute("""
+            SELECT DATE(created_at) as date, COUNT(*) as count
+            FROM bookings
+            WHERE created_at >= date('now', '-30 days')
+            GROUP BY DATE(created_at)
+            ORDER BY DATE(created_at)
+        """).fetchall()
+        
+        # Get revenue trends for the last 30 days
+        revenue_trends = db.execute("""
+            SELECT DATE(b.created_at) as date, SUM(p.amount) as revenue
+            FROM bookings b
+            JOIN payments p ON b.booking_id = p.booking_id
+            WHERE p.payment_status = 'Completed' AND b.created_at >= date('now', '-30 days')
+            GROUP BY DATE(b.created_at)
+            ORDER BY DATE(b.created_at)
+        """).fetchall()
+        
+        # Get popular room types
+        popular_rooms = db.execute("""
+            SELECT r.room_type, COUNT(*) as count
+            FROM bookings b
+            JOIN rooms r ON b.room_id = r.room_id
+            GROUP BY r.room_type
+            ORDER BY count DESC
+            LIMIT 5
+        """).fetchall()
+        
+        # Get monthly revenue
+        monthly_revenue = db.execute("""
+            SELECT strftime('%Y-%m', created_at) as month, SUM(amount) as revenue
+            FROM payments
+            WHERE payment_status = 'Completed'
+            GROUP BY strftime('%Y-%m', created_at)
+            ORDER BY month DESC
+            LIMIT 12
+        """).fetchall()
+        
+        analytics = {
+            "booking_trends": [{"date": row["date"], "count": row["count"]} for row in booking_trends],
+            "revenue_trends": [{"date": row["date"], "revenue": row["revenue"] or 0} for row in revenue_trends],
+            "popular_rooms": [{"room_type": row["room_type"], "count": row["count"]} for row in popular_rooms],
+            "monthly_revenue": [{"month": row["month"], "revenue": row["revenue"] or 0} for row in monthly_revenue]
+        }
+        
+        db.close()
+        return jsonify(analytics), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/admin/reports", methods=["GET"])
+@token_required
+def admin_reports(payload):
+    if payload['type'] != 'admin':
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    try:
+        report_type = request.args.get('type', 'summary')
+        start_date = request.args.get('start_date', '2020-01-01')
+        end_date = request.args.get('end_date', '2030-12-31')
+        
+        db = get_db()
+        
+        if report_type == 'summary':
+            report = {
+                "period": f"{start_date} to {end_date}",
+                "total_bookings": db.execute("""
+                    SELECT COUNT(*) as count FROM bookings
+                    WHERE created_at BETWEEN ? AND ?
+                """, (start_date, end_date)).fetchone()['count'],
+                "total_revenue": db.execute("""
+                    SELECT SUM(amount) as total FROM payments
+                    WHERE payment_status = 'Completed' AND payment_date BETWEEN ? AND ?
+                """, (start_date, end_date)).fetchone()['total'] or 0,
+                "avg_booking_value": db.execute("""
+                    SELECT AVG(p.amount) as avg FROM payments p
+                    JOIN bookings b ON p.booking_id = b.booking_id
+                    WHERE p.payment_status = 'Completed' AND b.created_at BETWEEN ? AND ?
+                """, (start_date, end_date)).fetchone()['avg'] or 0,
+                "occupancy_rate": db.execute("""
+                    SELECT CAST(SUM(CASE WHEN status = 'Occupied' THEN 1 ELSE 0 END) AS FLOAT) * 100 / COUNT(*) as rate
+                    FROM rooms
+                """).fetchone()['rate'] or 0,
+                "top_customers": db.execute("""
+                    SELECT u.name, u.email, COUNT(b.booking_id) as booking_count
+                    FROM users u
+                    JOIN bookings b ON u.user_id = b.user_id
+                    WHERE b.created_at BETWEEN ? AND ?
+                    GROUP BY u.user_id
+                    ORDER BY booking_count DESC
+                    LIMIT 5
+                """, (start_date, end_date)).fetchall()
+            }
+        elif report_type == 'financial':
+            report = {
+                "period": f"{start_date} to {end_date}",
+                "total_revenue": db.execute("""
+                    SELECT SUM(amount) as total FROM payments
+                    WHERE payment_status = 'Completed' AND payment_date BETWEEN ? AND ?
+                """, (start_date, end_date)).fetchone()['total'] or 0,
+                "refunds_processed": db.execute("""
+                    SELECT SUM(refund_amount) as total FROM refunds
+                    WHERE refund_date BETWEEN ? AND ?
+                """, (start_date, end_date)).fetchone()['total'] or 0,
+                "net_revenue": db.execute("""
+                    SELECT 
+                        COALESCE(SUM(p.amount), 0) - COALESCE(SUM(r.refund_amount), 0) as net
+                    FROM payments p
+                    LEFT JOIN refunds r ON p.payment_id = r.payment_id
+                    WHERE p.payment_status = 'Completed' AND p.payment_date BETWEEN ? AND ?
+                """, (start_date, end_date)).fetchone()['net'] or 0,
+                "revenue_by_payment_method": db.execute("""
+                    SELECT payment_method, SUM(amount) as total
+                    FROM payments
+                    WHERE payment_status = 'Completed' AND payment_date BETWEEN ? AND ?
+                    GROUP BY payment_method
+                """, (start_date, end_date)).fetchall()
+            }
+        elif report_type == 'booking':
+            report = {
+                "period": f"{start_date} to {end_date}",
+                "total_bookings": db.execute("""
+                    SELECT COUNT(*) as count FROM bookings
+                    WHERE created_at BETWEEN ? AND ?
+                """, (start_date, end_date)).fetchone()['count'],
+                "confirmed_bookings": db.execute("""
+                    SELECT COUNT(*) as count FROM bookings
+                    WHERE booking_status = 'Confirmed' AND created_at BETWEEN ? AND ?
+                """, (start_date, end_date)).fetchone()['count'],
+                "cancelled_bookings": db.execute("""
+                    SELECT COUNT(*) as count FROM bookings
+                    WHERE booking_status = 'Cancelled' AND created_at BETWEEN ? AND ?
+                """, (start_date, end_date)).fetchone()['count'],
+                "avg_stay_duration": db.execute("""
+                    SELECT AVG(julianday(check_out) - julianday(check_in)) as avg_days
+                    FROM bookings
+                    WHERE created_at BETWEEN ? AND ?
+                """, (start_date, end_date)).fetchone()['avg_days'] or 0,
+                "bookings_by_status": db.execute("""
+                    SELECT booking_status, COUNT(*) as count
+                    FROM bookings
+                    WHERE created_at BETWEEN ? AND ?
+                    GROUP BY booking_status
+                """, (start_date, end_date)).fetchall()
+            }
+        
+        db.close()
+        return jsonify(report), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -247,11 +416,26 @@ def get_available_rooms():
     try:
         check_in = request.args.get('check_in')
         check_out = request.args.get('check_out')
+        destination = request.args.get('destination', '').lower()
         
         db = get_db()
         
+        # Base query
+        base_query = """
+            SELECT r.*, 
+                   rf.feature_name as feature,
+                   GROUP_CONCAT(rf.feature_name) as features,
+                   (SELECT AVG(rating) FROM reviews WHERE room_id = r.room_id) as avg_rating,
+                   (SELECT COUNT(*) FROM reviews WHERE room_id = r.room_id) as reviews_count
+            FROM rooms r
+            LEFT JOIN room_feature_map rfm ON r.room_id = rfm.room_id
+            LEFT JOIN room_features rf ON rfm.feature_id = rf.feature_id
+            WHERE r.status = 'Available'
+        """
+        
+        # Add date filtering if dates are provided
+        params = []
         if check_in and check_out:
-            # Get rooms that are not booked in the given date range
             booked_room_ids = db.execute("""
                 SELECT DISTINCT room_id FROM bookings 
                 WHERE (check_in <= ? AND check_out >= ?) 
@@ -262,28 +446,32 @@ def get_available_rooms():
             
             if booked_ids:
                 placeholders = ','.join('?' * len(booked_ids))
-                rooms = db.execute(f"""
-                    SELECT * FROM rooms 
-                    WHERE status = 'Available' 
-                    AND room_id NOT IN ({placeholders})
-                    ORDER BY price ASC
-                """, booked_ids).fetchall()
-            else:
-                rooms = db.execute("""
-                    SELECT * FROM rooms 
-                    WHERE status = 'Available' 
-                    ORDER BY price ASC
-                """).fetchall()
-        else:
-            # Get all available rooms
-            rooms = db.execute("""
-                SELECT * FROM rooms 
-                WHERE status = 'Available' 
-                ORDER BY price ASC
-            """).fetchall()
+                base_query += f" AND r.room_id NOT IN ({placeholders})"
+                params.extend(booked_ids)
         
+        # Add destination filtering if provided
+        if destination:
+            base_query += " AND (r.room_type LIKE ? OR r.description LIKE ?)"
+            params.extend([f'%{destination}%', f'%{destination}%'])
+        
+        # Group by room and order
+        base_query += " GROUP BY r.room_id ORDER BY r.price ASC"
+        
+        rooms = db.execute(base_query, params).fetchall()
         db.close()
-        return jsonify([dict(room) for room in rooms]), 200
+        
+        # Process the results to have proper features array
+        processed_rooms = []
+        for room in rooms:
+            room_dict = dict(room)
+            # Convert features string to array
+            if room_dict['features']:
+                room_dict['features'] = room_dict['features'].split(',')
+            else:
+                room_dict['features'] = []
+            processed_rooms.append(room_dict)
+        
+        return jsonify(processed_rooms), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -310,12 +498,198 @@ def get_room_details(room_id):
             WHERE rsm.room_id = ?
         """, (room_id,)).fetchall()
         
+        # Get room reviews
+        reviews = db.execute("""
+            SELECT r.review_id, r.rating, r.comment, r.created_at, u.name as user_name
+            FROM reviews r
+            JOIN users u ON r.user_id = u.user_id
+            WHERE r.room_id = ?
+            ORDER BY r.created_at DESC
+        """, (room_id,)).fetchall()
+        
         room_dict = dict(room)
         room_dict['features'] = [f['feature_name'] for f in features]
         room_dict['services'] = [s['service_name'] for s in services]
+        room_dict['reviews'] = [dict(review) for review in reviews]
+        
+        # Calculate average rating
+        avg_rating = db.execute("""
+            SELECT AVG(rating) as avg_rating, COUNT(*) as review_count
+            FROM reviews WHERE room_id = ?
+        """, (room_id,)).fetchone()
+        
+        room_dict['avg_rating'] = round(avg_rating['avg_rating'], 1) if avg_rating['avg_rating'] else 0
+        room_dict['review_count'] = avg_rating['review_count'] if avg_rating['review_count'] else 0
         
         db.close()
         return jsonify(room_dict), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ================== NEW FEATURES ==================
+@app.route("/rooms/search", methods=["GET"])
+def search_rooms():
+    """Advanced room search with filters"""
+    try:
+        check_in = request.args.get('check_in')
+        check_out = request.args.get('check_out')
+        destination = request.args.get('destination', '').lower()
+        min_price = request.args.get('min_price', type=float)
+        max_price = request.args.get('max_price', type=float)
+        room_type = request.args.get('room_type', '').lower()
+        min_rating = request.args.get('min_rating', type=float)
+        
+        db = get_db()
+        
+        # Base query with joins for features and ratings
+        base_query = """
+            SELECT r.*,
+                   GROUP_CONCAT(rf.feature_name) as features,
+                   (SELECT AVG(rating) FROM reviews WHERE room_id = r.room_id) as avg_rating,
+                   (SELECT COUNT(*) FROM reviews WHERE room_id = r.room_id) as reviews_count
+            FROM rooms r
+            LEFT JOIN room_feature_map rfm ON r.room_id = rfm.room_id
+            LEFT JOIN room_features rf ON rfm.feature_id = rf.feature_id
+            WHERE r.status = 'Available'
+        """
+        
+        params = []
+        
+        # Add date filtering if dates are provided
+        if check_in and check_out:
+            booked_room_ids = db.execute("""
+                SELECT DISTINCT room_id FROM bookings 
+                WHERE (check_in <= ? AND check_out >= ?) 
+                AND booking_status IN ('Pending', 'Confirmed')
+            """, (check_out, check_in)).fetchall()
+            
+            booked_ids = [row['room_id'] for row in booked_room_ids]
+            
+            if booked_ids:
+                placeholders = ','.join('?' * len(booked_ids))
+                base_query += f" AND r.room_id NOT IN ({placeholders})"
+                params.extend(booked_ids)
+        
+        # Add price filtering
+        if min_price is not None:
+            base_query += " AND r.price >= ?"
+            params.append(min_price)
+        if max_price is not None:
+            base_query += " AND r.price <= ?"
+            params.append(max_price)
+        
+        # Add room type filtering
+        if room_type:
+            base_query += " AND LOWER(r.room_type) LIKE ?"
+            params.append(f'%{room_type}%')
+        
+        # Add destination filtering
+        if destination:
+            base_query += " AND (LOWER(r.room_type) LIKE ? OR LOWER(r.description) LIKE ?)"
+            params.extend([f'%{destination}%', f'%{destination}%'])
+        
+        # Add rating filtering
+        if min_rating is not None:
+            base_query += " AND (SELECT AVG(rating) FROM reviews WHERE room_id = r.room_id) >= ?"
+            params.append(min_rating)
+        
+        # Group by room and order by price
+        base_query += " GROUP BY r.room_id ORDER BY r.price ASC"
+        
+        rooms = db.execute(base_query, params).fetchall()
+        db.close()
+        
+        # Process the results
+        processed_rooms = []
+        for room in rooms:
+            room_dict = dict(room)
+            if room_dict['features']:
+                room_dict['features'] = room_dict['features'].split(',')
+            else:
+                room_dict['features'] = []
+            processed_rooms.append(room_dict)
+        
+        return jsonify(processed_rooms), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/reviews", methods=["GET"])
+def get_reviews():
+    """Get reviews for a specific room or all reviews"""
+    try:
+        room_id = request.args.get('room_id', type=int)
+        
+        db = get_db()
+        if room_id:
+            reviews = db.execute("""
+                SELECT r.*, u.name as user_name
+                FROM reviews r
+                JOIN users u ON r.user_id = u.user_id
+                WHERE r.room_id = ?
+                ORDER BY r.created_at DESC
+            """, (room_id,)).fetchall()
+        else:
+            reviews = db.execute("""
+                SELECT r.*, u.name as user_name, ro.room_type
+                FROM reviews r
+                JOIN users u ON r.user_id = u.user_id
+                JOIN rooms ro ON r.room_id = ro.room_id
+                ORDER BY r.created_at DESC
+            """).fetchall()
+        
+        db.close()
+        return jsonify([dict(review) for review in reviews]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/reviews", methods=["POST"])
+@token_required
+def add_review(payload):
+    """Add a review for a room"""
+    if payload['type'] != 'user':
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    try:
+        data = request.json
+        room_id = data.get("room_id")
+        rating = data.get("rating")
+        comment = data.get("comment")
+        
+        if not room_id or not rating or rating < 1 or rating > 5:
+            return jsonify({"error": "Valid room_id and rating (1-5) are required"}), 400
+        
+        db = get_db()
+        
+        # Check if user has booked this room
+        booking = db.execute("""
+            SELECT * FROM bookings 
+            WHERE user_id = ? AND room_id = ? AND booking_status = 'Confirmed'
+        """, (payload['user']['user_id'], room_id)).fetchone()
+        
+        if not booking:
+            db.close()
+            return jsonify({"error": "You can only review rooms you have stayed in"}), 400
+        
+        # Check if user already reviewed this room
+        existing_review = db.execute("""
+            SELECT * FROM reviews 
+            WHERE user_id = ? AND room_id = ?
+        """, (payload['user']['user_id'], room_id)).fetchone()
+        
+        if existing_review:
+            db.close()
+            return jsonify({"error": "You have already reviewed this room"}), 400
+        
+        # Insert the review
+        db.execute("""
+            INSERT INTO reviews (user_id, room_id, rating, comment)
+            VALUES (?, ?, ?, ?)
+        """, (payload['user']['user_id'], room_id, rating, comment))
+        
+        db.commit()
+        db.close()
+        
+        return jsonify({"message": "Review added successfully"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -332,14 +706,19 @@ def home():
             },
             "public": {
                 "available_rooms": "GET /rooms/available",
-                "room_details": "GET /rooms/{id}"
+                "room_details": "GET /rooms/{id}",
+                "search_rooms": "GET /rooms/search",
+                "reviews": "GET /reviews"
             },
             "user_protected": {
                 "my_bookings": "GET /user/bookings",
-                "create_booking": "POST /user/bookings"
+                "create_booking": "POST /user/bookings",
+                "add_review": "POST /reviews"
             },
             "admin_protected": {
                 "dashboard": "GET /admin/dashboard",
+                "analytics": "GET /admin/analytics",
+                "reports": "GET /admin/reports",
                 "manage_users": "GET /admin/users",
                 "manage_bookings": "GET /admin/bookings"
             }

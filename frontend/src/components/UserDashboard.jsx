@@ -260,45 +260,54 @@ const UserDashboard = ({ user, onLogout }) => {
       ) : (
         <div className="rooms-grid">
           {rooms.map(room => (
-            <div key={room.room_id} className="room-card">
-              <div className="room-image">
-                {room.photo_url ? (
-                  <img 
-                    src={room.photo_url}
-                    alt={room.room_type}
-                    onError={(e) => {
-                      e.target.src = `https://placehold.co/300x200?text=Room+${room.room_number}`;
-                    }}
-                  />
-                ) : (
-                  <img 
-                    src={`https://picsum.photos/300/200?random=${room.room_id}`} 
-                    alt={room.room_type}
-                    onError={(e) => {
-                      e.target.src = `https://placehold.co/300x200?text=Room+${room.room_number}`;
-                    }}
-                  />
-                )}
-              </div>
-              <div className="room-details">
-                <h3>Room {room.room_number}</h3>
-                <p className="room-type">{room.room_type}</p>
-                <p className="room-description">{room.description || 'Comfortable and spacious room'}</p>
-                <div className="room-price">
-                  <span className="price">${room.price}</span>
-                  <span className="per-night">per night</span>
-                </div>
-              </div>
-              <div className="room-actions">
-                <button 
-                  className="btn btn-book"
-                  onClick={() => {
-                    setBookingForm({...bookingForm, room_id: room.room_id});
-                    setActiveTab('new');
+            <div key={room.room_id} className="booking-hotel-card">
+              <div className="booking-hotel-image">
+                <img 
+                  src={room.photo_url || `https://images.unsplash.com/photo-1631049307264-da0ec9d70344?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80`}
+                  alt={room.room_type}
+                  onError={(e) => {
+                    e.target.src = `https://placehold.co/300x200?text=Room+${room.room_number}`;
                   }}
-                >
-                  Select & Book
-                </button>
+                />
+                <div className="booking-hotel-badge">SAVED</div>
+                <div className="booking-hotel-score">{room.rating || 4.5}</div>
+              </div>
+              
+              <div className="booking-hotel-details">
+                <h3>{room.room_type}</h3>
+                <p className="booking-hotel-location">📍 {room.location || `City Center, ${room.room_number}`}</p>
+                
+                <div className="booking-hotel-rating">
+                  {'★'.repeat(Math.floor(room.rating || 4))}
+                  {'☆'.repeat(5 - Math.floor(room.rating || 4))}
+                </div>
+                
+                <p className="booking-hotel-description">{room.description || 'Comfortable and spacious room with modern amenities.'}</p>
+                
+                <div className="booking-hotel-features">
+                  <span className="booking-feature-tag">WiFi</span>
+                  <span className="booking-feature-tag">AC</span>
+                  <span className="booking-feature-tag">TV</span>
+                </div>
+                
+                <div className="booking-hotel-price">
+                  <div>
+                    <span className="booking-price">${room.price}</span>
+                    <span className="booking-per-night">per night</span>
+                  </div>
+                </div>
+                
+                <div className="booking-hotel-actions">
+                  <button 
+                    className="booking-btn-book"
+                    onClick={() => {
+                      setBookingForm({...bookingForm, room_id: room.room_id});
+                      setActiveTab('new');
+                    }}
+                  >
+                    Select & Book
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -373,44 +382,55 @@ const UserDashboard = ({ user, onLogout }) => {
 
   return (
     <div className="user-dashboard-container">
-      <header className="dashboard-header">
-        <h1>Hotel Booking Dashboard</h1>
-        <div className="user-info">
-          <span>Welcome, {user.name || user.email}!</span>
-          <button onClick={onLogout} className="btn btn-secondary">
-            Logout
-          </button>
+      <header className="booking-header">
+        <div className="booking-logo">
+          <span className="booking-logo-icon">🏨</span>
+          <span>BookingPro</span>
+        </div>
+        <div className="booking-header-links">
+          <a href="#" className="booking-header-link">List your property</a>
+          <a href="#" className="booking-header-link">Support</a>
+        </div>
+        <div className="booking-header-user">
+          <div className="booking-user-info">
+            <span className="booking-user-name">Welcome, {user.name || user.email}!</span>
+            <button onClick={onLogout} className="btn btn-secondary">
+              Logout
+            </button>
+          </div>
         </div>
       </header>
       
-      <nav className="dashboard-nav">
-        <button
-          className={`nav-btn ${activeTab === 'bookings' ? 'active' : ''}`}
-          onClick={() => setActiveTab('bookings')}
-        >
-          My Bookings
-        </button>
-        <button
-          className={`nav-btn ${activeTab === 'browse' ? 'active' : ''}`}
-          onClick={() => setActiveTab('browse')}
-        >
-          Browse Rooms
-        </button>
-        <button
-          className={`nav-btn ${activeTab === 'new' ? 'active' : ''}`}
-          onClick={() => setActiveTab('new')}
-        >
-          Make Booking
-        </button>
-      </nav>
-      
-      <main className="dashboard-main">
-        {error && <div className="error-message">{error}</div>}
+      <div className="dashboard-container">
+        <nav className="dashboard-nav">
+          <button
+            className={`nav-btn ${activeTab === 'bookings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('bookings')}
+          >
+            My Bookings
+          </button>
+          <button
+            className={`nav-btn ${activeTab === 'browse' ? 'active' : ''}`}
+            onClick={() => setActiveTab('browse')}
+          >
+            Browse Rooms
+          </button>
+          <button
+            className={`nav-btn ${activeTab === 'new' ? 'active' : ''}`}
+            onClick={() => setActiveTab('new')}
+          >
+            Make Booking
+          </button>
+        </nav>
         
-        {activeTab === 'bookings' && renderBookings()}
-        {activeTab === 'browse' && renderBrowseRooms()}
-        {activeTab === 'new' && renderMakeBooking()}
-      </main>
+        <main className="dashboard-main">
+          {error && <div className="error-message">{error}</div>}
+          
+          {activeTab === 'bookings' && renderBookings()}
+          {activeTab === 'browse' && renderBrowseRooms()}
+          {activeTab === 'new' && renderMakeBooking()}
+        </main>
+      </div>
       
       {/* Receipt Modal */}
       {showReceipt && receiptData && (

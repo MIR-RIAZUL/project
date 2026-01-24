@@ -367,30 +367,32 @@ const AdminDashboard = ({ user, onLogout }) => {
         ) : (
           <div className="rooms-grid">
             {rooms.map(room => (
-              <div key={room.room_id} className="room-card">
-                <div className="room-header">
-                  <h3>Room {room.room_number}</h3>
-                  <span className={`status-badge status-${room.status.toLowerCase()}`}>
-                    {room.status}
-                  </span>
-                </div>
-                <div className="room-details">
-                  {room.photo_url && (
-                    <div className="room-photo">
-                      <img src={room.photo_url} alt={`Room ${room.room_number}`} className="room-image" />
-                    </div>
+              <div key={room.room_id} className="booking-hotel-card">
+                <div className="booking-hotel-image">
+                  {room.photo_url ? (
+                    <img src={room.photo_url} alt={`Room ${room.room_number}`} className="booking-hotel-image" />
+                  ) : (
+                    <img src={`https://images.unsplash.com/photo-1631049307264-da0ec9d70344?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80`} alt={`Room ${room.room_number}`} className="booking-hotel-image" />
                   )}
+                </div>
+                <div className="booking-hotel-details">
+                  <div className="booking-hotel-header">
+                    <h3>Room {room.room_number}</h3>
+                    <span className={`status-badge status-${room.status.toLowerCase()}`}>
+                      {room.status}
+                    </span>
+                  </div>
                   <p><strong>Type:</strong> {room.room_type}</p>
                   <p><strong>Price:</strong> ${room.price}</p>
                   <p><strong>Description:</strong> {room.description || '-'}</p>
-                </div>
-                <div className="room-actions">
-                  <button 
-                    className="btn btn-danger"
-                    onClick={() => handleDeleteRoom(room.room_id)}
-                  >
-                    Delete
-                  </button>
+                  <div className="room-actions">
+                    <button 
+                      className="btn btn-danger"
+                      onClick={() => handleDeleteRoom(room.room_id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -454,51 +456,62 @@ const AdminDashboard = ({ user, onLogout }) => {
 
   return (
     <div className="admin-dashboard-container">
-      <header className="dashboard-header">
-        <h1>Admin Dashboard</h1>
-        <div className="user-info">
-          <span>Welcome, {user.username} (Admin)!</span>
-          <button onClick={onLogout} className="btn btn-secondary">
-            Logout
-          </button>
+      <header className="booking-header">
+        <div className="booking-logo">
+          <span className="booking-logo-icon">🏨</span>
+          <span>BookingPro Admin</span>
+        </div>
+        <div className="booking-header-links">
+          <a href="#" className="booking-header-link">Dashboard</a>
+          <a href="#" className="booking-header-link">Reports</a>
+        </div>
+        <div className="booking-header-user">
+          <div className="booking-user-info">
+            <span className="booking-user-name">Welcome, {user.username} (Admin)!</span>
+            <button onClick={onLogout} className="btn btn-secondary">
+              Logout
+            </button>
+          </div>
         </div>
       </header>
       
-      <nav className="dashboard-nav">
-        <button
-          className={`nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-          onClick={() => setActiveTab('dashboard')}
-        >
-          Dashboard
-        </button>
-        <button
-          className={`nav-btn ${activeTab === 'users' ? 'active' : ''}`}
-          onClick={() => setActiveTab('users')}
-        >
-          Users
-        </button>
-        <button
-          className={`nav-btn ${activeTab === 'rooms' ? 'active' : ''}`}
-          onClick={() => setActiveTab('rooms')}
-        >
-          Rooms
-        </button>
-        <button
-          className={`nav-btn ${activeTab === 'bookings' ? 'active' : ''}`}
-          onClick={() => setActiveTab('bookings')}
-        >
-          Bookings
-        </button>
-      </nav>
-      
-      <main className="dashboard-main">
-        {error && <div className="error-message">{error}</div>}
+      <div className="dashboard-container">
+        <nav className="dashboard-nav">
+          <button
+            className={`nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            Dashboard
+          </button>
+          <button
+            className={`nav-btn ${activeTab === 'users' ? 'active' : ''}`}
+            onClick={() => setActiveTab('users')}
+          >
+            Users
+          </button>
+          <button
+            className={`nav-btn ${activeTab === 'rooms' ? 'active' : ''}`}
+            onClick={() => setActiveTab('rooms')}
+          >
+            Rooms
+          </button>
+          <button
+            className={`nav-btn ${activeTab === 'bookings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('bookings')}
+          >
+            Bookings
+          </button>
+        </nav>
         
-        {activeTab === 'dashboard' && renderDashboard()}
-        {activeTab === 'users' && renderUsers()}
-        {activeTab === 'rooms' && renderRooms()}
-        {activeTab === 'bookings' && renderBookings()}
-      </main>
+        <main className="dashboard-main">
+          {error && <div className="error-message">{error}</div>}
+          
+          {activeTab === 'dashboard' && renderDashboard()}
+          {activeTab === 'users' && renderUsers()}
+          {activeTab === 'rooms' && renderRooms()}
+          {activeTab === 'bookings' && renderBookings()}
+        </main>
+      </div>
     </div>
   );
 };

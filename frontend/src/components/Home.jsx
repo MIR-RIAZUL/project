@@ -6,26 +6,72 @@ const Home = ({ onLoginRedirect }) => {
   const [filters, setFilters] = useState({
     check_in: '',
     check_out: '',
-    guests: 1
+    guests: 1,
+    destination: '',
+    min_price: '',
+    max_price: '',
+    room_type: '',
+    min_rating: ''
   });
+  const [sortBy, setSortBy] = useState('price');
+  const [currentPage, setCurrentPage] = useState(1);
+  const roomsPerPage = 6;
 
   useEffect(() => {
     fetchRooms();
-  }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filters, sortBy]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRooms = async () => {
     setLoading(true);
     try {
-      let url = 'http://127.0.0.1:5000/rooms/available';
+      let url = 'http://127.0.0.1:5000/rooms/search';
+      const params = [];
+      
       if (filters.check_in && filters.check_out) {
-        url += `?check_in=${filters.check_in}&check_out=${filters.check_out}`;
+        params.push(`check_in=${filters.check_in}`);
+        params.push(`check_out=${filters.check_out}`);
+      }
+      if (filters.destination) {
+        params.push(`destination=${encodeURIComponent(filters.destination)}`);
+      }
+      if (filters.min_price) {
+        params.push(`min_price=${filters.min_price}`);
+      }
+      if (filters.max_price) {
+        params.push(`max_price=${filters.max_price}`);
+      }
+      if (filters.room_type) {
+        params.push(`room_type=${encodeURIComponent(filters.room_type)}`);
+      }
+      if (filters.min_rating) {
+        params.push(`min_rating=${filters.min_rating}`);
+      }
+      
+      if (params.length > 0) {
+        url += '?' + params.join('&');
       }
       
       const response = await fetch(url);
       const data = await response.json();
       
       if (response.ok) {
-        setRooms(data);
+        // Sort rooms based on selected criteria
+        let sortedRooms = [...data];
+        switch(sortBy) {
+          case 'price-low':
+            sortedRooms.sort((a, b) => a.price - b.price);
+            break;
+          case 'price-high':
+            sortedRooms.sort((a, b) => b.price - a.price);
+            break;
+          case 'rating':
+            sortedRooms.sort((a, b) => (b.avg_rating || 0) - (a.avg_rating || 0));
+            break;
+          default:
+            // Default sort by price ascending
+            sortedRooms.sort((a, b) => a.price - b.price);
+        }
+        setRooms(sortedRooms);
       }
     } catch (error) {
       console.error('Error fetching rooms:', error);
@@ -41,133 +87,271 @@ const Home = ({ onLoginRedirect }) => {
     });
   };
 
+  const handleSortChange = (e) => {
+    setSortBy(e.target.value);
+  };
+
   const handleBookRoom = (roomId) => {
     if (!localStorage.getItem('token')) {
       onLoginRedirect();
     } else {
-      // In a real app, this would navigate to booking page
-      alert(`Please login to book room ${roomId}`);
+      // Navigate to booking page
+      window.location.href = `/user/bookings`;
     }
   };
 
+  // Pagination
+  const indexOfLastRoom = currentPage * roomsPerPage;
+  const indexOfFirstRoom = indexOfLastRoom - roomsPerPage;
+  const currentRooms = rooms.slice(indexOfFirstRoom, indexOfLastRoom);
+  const totalPages = Math.ceil(rooms.length / roomsPerPage);
+
   return (
     <div className="home-container">
-      <div className="hero-section">
+      {/* Hero Section */}
+      <div className="hero-section" style={{background: 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1500&q=80") center/cover', padding: '80px 20px', textAlign: 'center', color: 'white'}}>
         <div className="hero-content">
-          <h1>Welcome to Luxury Hotel Booking</h1>
-          <p>Discover the perfect accommodation for your stay</p>
+          <h1 style={{fontSize: '3rem', marginBottom: '1rem'}}>Find Your Perfect Stay</h1>
+          <p style={{fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto'}}>Discover amazing hotels, homes, and places to stay around the world</p>
         </div>
       </div>
 
-      <div className="search-section">
-        <div className="search-filters">
-          <div className="filter-group">
-            <label>Check In</label>
+      {/* Advanced Search Bar */}
+      <div className="booking-search-bar">
+        <form onSubmit={(e) => { e.preventDefault(); fetchRooms(); }} className="booking-search-form">
+          <div className="booking-form-group">
+            <label htmlFor="destination">Destination</label>
+            <input
+              type="text"
+              name="destination"
+              placeholder="Where are you going?"
+              value={filters.destination}
+              onChange={handleFilterChange}
+              className="booking-form-control"
+            />
+          </div>
+          
+          <div className="booking-form-group">
+            <label htmlFor="check_in">Check In</label>
             <input
               type="date"
               name="check_in"
               value={filters.check_in}
               onChange={handleFilterChange}
-              className="filter-input"
+              className="booking-form-control"
+              required
             />
           </div>
-          <div className="filter-group">
-            <label>Check Out</label>
+          
+          <div className="booking-form-group">
+            <label htmlFor="check_out">Check Out</label>
             <input
               type="date"
               name="check_out"
               value={filters.check_out}
               onChange={handleFilterChange}
-              className="filter-input"
+              className="booking-form-control"
+              required
             />
           </div>
-          <div className="filter-group">
-            <label>Guests</label>
+          
+          <div className="booking-form-group">
+            <label htmlFor="guests">Guests</label>
             <select
               name="guests"
               value={filters.guests}
               onChange={handleFilterChange}
-              className="filter-input"
+              className="booking-form-control"
             >
-              {[1,2,3,4,5,6].map(num => (
+              {[1,2,3,4,5,6,7,8].map(num => (
                 <option key={num} value={num}>{num} {num === 1 ? 'Guest' : 'Guests'}</option>
               ))}
             </select>
           </div>
-          <button className="btn btn-search" onClick={fetchRooms}>
-            Search Rooms
+          
+          <div className="booking-form-group">
+            <label htmlFor="room_type">Room Type</label>
+            <select
+              name="room_type"
+              value={filters.room_type}
+              onChange={handleFilterChange}
+              className="booking-form-control"
+            >
+              <option value="">All Types</option>
+              <option value="Standard">Standard</option>
+              <option value="Deluxe">Deluxe</option>
+              <option value="Suite">Suite</option>
+              <option value="Executive">Executive</option>
+              <option value="Presidential">Presidential</option>
+            </select>
+          </div>
+          
+          <div className="booking-form-group">
+            <label htmlFor="min_price">Min Price</label>
+            <input
+              type="number"
+              name="min_price"
+              placeholder="Min"
+              value={filters.min_price}
+              onChange={handleFilterChange}
+              className="booking-form-control"
+              min="0"
+            />
+          </div>
+          
+          <div className="booking-form-group">
+            <label htmlFor="max_price">Max Price</label>
+            <input
+              type="number"
+              name="max_price"
+              placeholder="Max"
+              value={filters.max_price}
+              onChange={handleFilterChange}
+              className="booking-form-control"
+              min="0"
+            />
+          </div>
+          
+          <div className="booking-form-group">
+            <label htmlFor="min_rating">Min Rating</label>
+            <select
+              name="min_rating"
+              value={filters.min_rating}
+              onChange={handleFilterChange}
+              className="booking-form-control"
+            >
+              <option value="">Any Rating</option>
+              <option value="1">1 Star+</option>
+              <option value="2">2 Stars+</option>
+              <option value="3">3 Stars+</option>
+              <option value="4">4 Stars+</option>
+              <option value="5">5 Stars+</option>
+            </select>
+          </div>
+          
+          <button type="submit" className="booking-search-button">
+            Search
           </button>
+        </form>
+      </div>
+
+      {/* Sort and Filter Options */}
+      <div className="booking-sort-filter">
+        <div className="booking-results-count">
+          {rooms.length} properties found
+        </div>
+        <div>
+          <select 
+            value={sortBy} 
+            onChange={handleSortChange} 
+            className="booking-sort-select"
+          >
+            <option value="price">Sort by: Price (Low to High)</option>
+            <option value="price-high">Price (High to Low)</option>
+            <option value="rating">Top Rated</option>
+          </select>
         </div>
       </div>
 
-      <div className="rooms-section">
-        <h2>Available Rooms</h2>
+      {/* Hotel Listings */}
+      <div className="main-content">
         {loading ? (
-          <div className="loading">Searching for available rooms...</div>
-        ) : (
+          <div className="loading">Searching for available properties...</div>
+        ) : currentRooms.length > 0 ? (
           <div className="rooms-grid">
-            {rooms.length > 0 ? (
-              rooms.map(room => (
-                <div key={room.room_id} className="room-card">
-                  <div className="room-image">
-                    <img 
-                      src={`https://picsum.photos/300/200?random=${room.room_id}`} 
-                      alt={room.room_type}
-                      onError={(e) => {
-                        e.target.src = `https://placehold.co/300x200?text=Room+${room.room_number}`;
-                      }}
-                    />
+            {currentRooms.map(room => (
+              <div key={room.room_id} className="booking-hotel-card">
+                <div className="booking-hotel-image">
+                  <img 
+                    src={room.photo_url || `https://images.unsplash.com/photo-1631049307264-da0ec9d70344?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80`} 
+                    alt={room.room_type}
+                    onError={(e) => {
+                      e.target.src = `https://placehold.co/300x200?text=Room+${room.room_number}`;
+                    }}
+                  />
+                  <div className="booking-hotel-badge">SAVED</div>
+                  <div className="booking-hotel-score">{room.avg_rating || 0} ★ ({room.reviews_count || 0})</div>
+                </div>
+                
+                <div className="booking-hotel-details">
+                  <h3>{room.room_type}</h3>
+                  <p className="booking-hotel-location">📍 {room.location || `City Center, ${room.room_number}`}</p>
+                  
+                  <div className="booking-hotel-rating">
+                    {'★'.repeat(Math.floor(room.avg_rating || 0))}
+                    {'☆'.repeat(5 - Math.floor(room.avg_rating || 0))}
+                    <span>({room.reviews_count || 0} reviews)</span>
                   </div>
-                  <div className="room-details">
-                    <h3>Room {room.room_number}</h3>
-                    <p className="room-type">{room.room_type}</p>
-                    <p className="room-description">{room.description || 'Comfortable and spacious room'}</p>
-                    <div className="room-price">
-                      <span className="price">${room.price}</span>
-                      <span className="per-night">per night</span>
-                    </div>
-                    <div className="room-features">
-                      <span className="feature">★ {room.rating || 4.5}</span>
-                      <span className="feature">WiFi</span>
-                      <span className="feature">AC</span>
+                  
+                  <p className="booking-hotel-description">{room.description || 'Comfortable and spacious room with modern amenities.'}</p>
+                  
+                  <div className="booking-hotel-features">
+                    {(room.features || []).slice(0, 4).map((feature, idx) => (
+                      <span key={idx} className="booking-feature-tag">{feature}</span>
+                    ))}
+                  </div>
+                  
+                  <div className="booking-hotel-price">
+                    <div>
+                      <span className="booking-price">${room.price}</span>
+                      <span className="booking-per-night">per night</span>
                     </div>
                   </div>
-                  <div className="room-actions">
+                  
+                  <div className="booking-hotel-actions">
                     <button 
-                      className="btn btn-book"
+                      className="booking-btn-book"
                       onClick={() => handleBookRoom(room.room_id)}
                     >
-                      Book Now
+                      Reserve
                     </button>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div className="no-rooms">
-                <p>No rooms available for the selected dates. Please try different dates.</p>
               </div>
-            )}
+            ))}
+          </div>
+        ) : (
+          <div className="booking-no-results">
+            <h3>No properties match your search</h3>
+            <p>Try changing your search criteria to see more options</p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="booking-pagination">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNumber => (
+              <button
+                key={pageNumber}
+                onClick={() => setCurrentPage(pageNumber)}
+                className={`booking-page-btn ${currentPage === pageNumber ? 'active' : ''}`}
+              >
+                {pageNumber}
+              </button>
+            ))}
           </div>
         )}
       </div>
 
-      <div className="features-section">
-        <div className="features-grid">
-          <div className="feature-item">
-            <h3>✈️ Easy Booking</h3>
-            <p>Quick and secure room reservations</p>
+      {/* Features Section */}
+      <div className="booking-features-section">
+        <h2 style={{textAlign: 'center', marginBottom: '30px'}}>Why Choose Us?</h2>
+        <div className="booking-features-grid">
+          <div className="booking-feature-item">
+            <h3>🏠 Wide Selection</h3>
+            <p>Choose from thousands of properties worldwide with verified reviews</p>
           </div>
-          <div className="feature-item">
+          <div className="booking-feature-item">
             <h3>💰 Best Price Guarantee</h3>
-            <p>Competitive rates with no hidden fees</p>
+            <p>We offer the best prices with no hidden fees or charges</p>
           </div>
-          <div className="feature-item">
-            <h3>🌟 Premium Service</h3>
-            <p>24/7 customer support and concierge</p>
+          <div className="booking-feature-item">
+            <h3>🛡️ Secure Booking</h3>
+            <p>Your personal and payment information is always protected</p>
           </div>
-          <div className="feature-item">
-            <h3>🔒 Secure Payment</h3>
-            <p>Safe and encrypted payment processing</p>
+          <div className="booking-feature-item">
+            <h3>🛎️ 24/7 Support</h3>
+            <p>Our customer service team is available anytime you need assistance</p>
           </div>
         </div>
       </div>

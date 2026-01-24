@@ -1,498 +1,135 @@
-import React, { useState, useEffect } from 'react';
-import jsPDF from 'jspdf';
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../contexts/AuthContext';
 
-const UserDashboard = ({ user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState('bookings');
+const UserDashboard = () => {
   const [bookings, setBookings] = useState([]);
-  const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [bookingForm, setBookingForm] = useState({
-    room_id: '',
-    check_in: '',
-    check_out: ''
-  });
   const [error, setError] = useState('');
-  const [showReceipt, setShowReceipt] = useState(false);
-  const [receiptData, setReceiptData] = useState(null);
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    fetchData();
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchBookings();
+  }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
-    setError('');
-    
+  const fetchBookings = async () => {
     try {
-      const token = localStorage.getItem('token');
-      
-      if (activeTab === 'bookings') {
-        const response = await fetch('http://127.0.0.1:5000/user/bookings', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-          setBookings(Array.isArray(result) ? result : []);
-        } else {
-          setError(result.error || 'Failed to fetch bookings');
-        }
-      } else if (activeTab === 'browse') {
-        const response = await fetch('http://127.0.0.1:5000/rooms/available');
-        const result = await response.json();
-        
-        if (response.ok) {
-          setRooms(Array.isArray(result) ? result : []);
-        } else {
-          setError(result.error || 'Failed to fetch rooms');
-        }
-      }
-    } catch (error) {
-      console.error('Fetch error:', error);
-      setError('Network error. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBookingSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    
-    try {
-      const token = localStorage.getItem('token');
-      
       const response = await fetch('http://127.0.0.1:5000/user/bookings', {
-        method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(bookingForm)
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
       });
       
-      const result = await response.json();
+      const data = await response.json();
       
       if (response.ok) {
-        // Fetch room details for receipt
-        const roomResponse = await fetch(`http://127.0.0.1:5000/rooms/${bookingForm.room_id}`);
-        const roomResult = await roomResponse.json();
-        
-        if (roomResponse.ok) {
-          const receiptInfo = {
-            booking_id: result.booking_id,
-            room: roomResult,
-            check_in: bookingForm.check_in,
-            check_out: bookingForm.check_out,
-            user: user,
-            booking_date: new Date().toISOString().split('T')[0]
-          };
-          setReceiptData(receiptInfo);
-          setShowReceipt(true);
-        }
-        
-        setBookingForm({ room_id: '', check_in: '', check_out: '' });
-        // Optionally fetch bookings to update the list
-        setTimeout(() => {
-          fetchData();
-        }, 1000);
+        setBookings(data);
       } else {
-        setError(result.error || 'Failed to create booking');
+        setError(data.error || 'Failed to fetch bookings');
       }
-    } catch (error) {
-      console.error('Booking error:', error);
-      setError('Network error. Please try again.');
+    } catch {
+      setError('Network error occurred');
     } finally {
       setLoading(false);
     }
   };
 
-  const closeReceipt = () => {
-    setShowReceipt(false);
-    setReceiptData(null);
-  };
+  const cancelBooking = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
 
-  const downloadReceiptAsPDF = () => {
-    if (!receiptData) return;
-    
-    const doc = new jsPDF();
-    
-    // Add title
-    doc.setFontSize(20);
-    doc.text('Hotel Booking Receipt', 20, 20);
-    
-    // Add booking details
-    doc.setFontSize(12);
-    doc.text(`Booking ID: #${receiptData.booking_id}`, 20, 40);
-    doc.text(`Booking Date: ${receiptData.booking_date}`, 20, 50);
-    doc.text(`Status: Pending`, 20, 60);
-    
-    // Add room information
-    doc.setFontSize(14);
-    doc.text('Room Information', 20, 80);
-    doc.setFontSize(12);
-    doc.text(`Room Number: ${receiptData.room.room_number}`, 20, 90);
-    doc.text(`Room Type: ${receiptData.room.room_type}`, 20, 100);
-    doc.text(`Description: ${receiptData.room.description || 'N/A'}`, 20, 110);
-    
-    // Add stay details
-    doc.setFontSize(14);
-    doc.text('Stay Details', 20, 130);
-    doc.setFontSize(12);
-    doc.text(`Check-in: ${receiptData.check_in}`, 20, 140);
-    doc.text(`Check-out: ${receiptData.check_out}`, 20, 150);
-    
-    const nights = Math.max(1, Math.floor((new Date(receiptData.check_out) - new Date(receiptData.check_in)) / (1000 * 60 * 60 * 24)));
-    doc.text(`Duration: ${nights} nights`, 20, 160);
-    
-    // Add guest information
-    doc.setFontSize(14);
-    doc.text('Guest Information', 20, 180);
-    doc.setFontSize(12);
-    doc.text(`Name: ${receiptData.user.name || receiptData.user.email}`, 20, 190);
-    doc.text(`Email: ${receiptData.user.email}`, 20, 200);
-    
-    // Add payment summary
-    doc.setFontSize(14);
-    doc.text('Payment Summary', 20, 220);
-    doc.setFontSize(12);
-    doc.text(`Room Rate: $${receiptData.room.price}/night`, 20, 230);
-    doc.text(`Nights: ${nights}`, 20, 240);
-    doc.text(`Subtotal: $${(receiptData.room.price * nights).toFixed(2)}`, 20, 250);
-    doc.text(`Taxes & Fees: $${(receiptData.room.price * nights * 0.1).toFixed(2)}`, 20, 260);
-    doc.text(`Total Amount: $${(receiptData.room.price * nights * 1.1).toFixed(2)}`, 20, 270);
-    
-    // Add footer
-    doc.setFontSize(10);
-    doc.text('Thank you for choosing our hotel!', 20, 290);
-    doc.text('Please keep this receipt for your records.', 20, 300);
-    
-    // Save the PDF
-    doc.save(`booking_receipt_${receiptData.booking_id}.pdf`);
-  };
-
-  const handleCancelBooking = async (bookingId) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) {
-      return;
-    }
-    
     try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`http://127.0.0.1:5000/user/bookings/${bookingId}`, {
-        method: 'DELETE',
+      const response = await fetch(`http://127.0.0.1:5000/user/bookings/${bookingId}/cancel`, {
+        method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
-      const result = await response.json();
-      
+
+      const data = await response.json();
+
       if (response.ok) {
-        alert('Booking cancelled successfully!');
-        setBookings(bookings.filter(booking => booking.booking_id !== bookingId));
+        // Refresh bookings
+        fetchBookings();
       } else {
-        setError(result.error || 'Failed to cancel booking');
+        alert(data.error || 'Failed to cancel booking');
       }
-    } catch (error) {
-      console.error('Cancel error:', error);
-      setError('Network error. Please try again.');
+    } catch {
+      alert('Network error occurred');
     }
   };
 
-  const renderBookings = () => (
-    <div className="user-bookings">
-      <h2>My Bookings</h2>
-      {loading ? (
-        <div className="loading">Loading bookings...</div>
-      ) : bookings.length === 0 ? (
-        <div className="no-data">
-          <p>You don't have any bookings yet.</p>
-          <button 
-            className="btn btn-primary"
-            onClick={() => setActiveTab('browse')}
-          >
-            Browse Rooms
-          </button>
-        </div>
-      ) : (
-        <div className="bookings-list">
-          {bookings.map(booking => (
-            <div key={booking.booking_id} className="booking-card">
-              <div className="booking-header">
-                <h3>Booking #{booking.booking_id}</h3>
-                <span className={`status-badge status-${booking.booking_status.toLowerCase()}`}>
-                  {booking.booking_status}
-                </span>
-              </div>
-              <div className="booking-details">
-                <p><strong>Room:</strong> {booking.room_number} ({booking.room_type})</p>
-                <p><strong>Dates:</strong> {booking.check_in} to {booking.check_out}</p>
-                <p><strong>Price:</strong> ${booking.price}</p>
-                <p><strong>Created:</strong> {new Date(booking.created_at).toLocaleDateString()}</p>
-              </div>
-              <div className="booking-actions">
-                {booking.booking_status !== 'Cancelled' && (
-                  <button 
-                    className="btn btn-danger"
-                    onClick={() => handleCancelBooking(booking.booking_id)}
-                  >
-                    Cancel Booking
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
-  const renderBrowseRooms = () => (
-    <div className="browse-rooms">
-      <h2>Browse Available Rooms</h2>
-      {loading ? (
-        <div className="loading">Loading rooms...</div>
-      ) : (
-        <div className="rooms-grid">
-          {rooms.map(room => (
-            <div key={room.room_id} className="booking-hotel-card">
-              <div className="booking-hotel-image">
-                <img 
-                  src={room.photo_url || `https://images.unsplash.com/photo-1631049307264-da0ec9d70344?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80`}
-                  alt={room.room_type}
-                  onError={(e) => {
-                    e.target.src = `https://placehold.co/300x200?text=Room+${room.room_number}`;
-                  }}
-                />
-                <div className="booking-hotel-badge">SAVED</div>
-                <div className="booking-hotel-score">{room.rating || 4.5}</div>
-              </div>
-              
-              <div className="booking-hotel-details">
-                <h3>{room.room_type}</h3>
-                <p className="booking-hotel-location">📍 {room.location || `City Center, ${room.room_number}`}</p>
-                
-                <div className="booking-hotel-rating">
-                  {'★'.repeat(Math.floor(room.rating || 4))}
-                  {'☆'.repeat(5 - Math.floor(room.rating || 4))}
-                </div>
-                
-                <p className="booking-hotel-description">{room.description || 'Comfortable and spacious room with modern amenities.'}</p>
-                
-                <div className="booking-hotel-features">
-                  <span className="booking-feature-tag">WiFi</span>
-                  <span className="booking-feature-tag">AC</span>
-                  <span className="booking-feature-tag">TV</span>
-                </div>
-                
-                <div className="booking-hotel-price">
-                  <div>
-                    <span className="booking-price">${room.price}</span>
-                    <span className="booking-per-night">per night</span>
-                  </div>
-                </div>
-                
-                <div className="booking-hotel-actions">
-                  <button 
-                    className="booking-btn-book"
-                    onClick={() => {
-                      setBookingForm({...bookingForm, room_id: room.room_id});
-                      setActiveTab('new');
-                    }}
-                  >
-                    Select & Book
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
-  const renderMakeBooking = () => (
-    <div className="make-booking">
-      <h2>Make a New Booking</h2>
-      {loading ? (
-        <div className="loading">Loading...</div>
-      ) : (
-        <form onSubmit={handleBookingSubmit} className="booking-form">
-          <div className="form-group">
-            <label htmlFor="room_id">Select Room</label>
-            <select
-              name="room_id"
-              value={bookingForm.room_id}
-              onChange={(e) => setBookingForm({...bookingForm, room_id: e.target.value})}
-              className="form-control"
-              required
-            >
-              <option value="">Choose a room</option>
-              {rooms.map(room => (
-                <option key={room.room_id} value={room.room_id}>
-                  Room {room.room_number} - {room.room_type} (${room.price}/night)
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="check_in">Check In</label>
-              <input
-                type="date"
-                name="check_in"
-                value={bookingForm.check_in}
-                onChange={(e) => setBookingForm({...bookingForm, check_in: e.target.value})}
-                className="form-control"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="check_out">Check Out</label>
-              <input
-                type="date"
-                name="check_out"
-                value={bookingForm.check_out}
-                onChange={(e) => setBookingForm({...bookingForm, check_out: e.target.value})}
-                className="form-control"
-                required
-              />
-            </div>
-          </div>
-          
-          {error && <div className="error-message">{error}</div>}
-          
-          <button 
-            type="submit" 
-            className="btn btn-primary"
-            disabled={loading || !bookingForm.room_id || !bookingForm.check_in || !bookingForm.check_out}
-          >
-            {loading ? 'Creating Booking...' : 'Create Booking'}
-          </button>
-        </form>
-      )}
-    </div>
-  );
+  if (loading) return <div className="loading">Loading your bookings...</div>;
+  if (error) return <div className="error-message">{error}</div>;
 
   return (
-    <div className="user-dashboard-container">
-      <header className="booking-header">
+    <div className="dashboard-container" style={{width: '95%', maxWidth: '1400px', margin: '30px auto'}}>
+      {/* Booking.com inspired header */}
+      <div className="booking-header" style={{borderRadius: '8px 8px 0 0', marginBottom: 0}}>
         <div className="booking-logo">
-          <span className="booking-logo-icon">🏨</span>
-          <span>BookingPro</span>
+          <span className="booking-logo-icon">👤</span>
+          <span>User Dashboard</span>
         </div>
-        <div className="booking-header-links">
-          <a href="#" className="booking-header-link">List your property</a>
-          <a href="#" className="booking-header-link">Support</a>
+        <div className="booking-user-info">
+          <span className="booking-user-name">Welcome, {user?.username}</span>
+          <span style={{fontSize: '12px', opacity: 0.8}}>Manage your bookings</span>
         </div>
-        <div className="booking-header-user">
-          <div className="booking-user-info">
-            <span className="booking-user-name">Welcome, {user.name || user.email}!</span>
-            <button onClick={onLogout} className="btn btn-secondary">
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
-      
-      <div className="dashboard-container">
-        <nav className="dashboard-nav">
-          <button
-            className={`nav-btn ${activeTab === 'bookings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('bookings')}
-          >
-            My Bookings
-          </button>
-          <button
-            className={`nav-btn ${activeTab === 'browse' ? 'active' : ''}`}
-            onClick={() => setActiveTab('browse')}
-          >
-            Browse Rooms
-          </button>
-          <button
-            className={`nav-btn ${activeTab === 'new' ? 'active' : ''}`}
-            onClick={() => setActiveTab('new')}
-          >
-            Make Booking
-          </button>
-        </nav>
-        
-        <main className="dashboard-main">
-          {error && <div className="error-message">{error}</div>}
-          
-          {activeTab === 'bookings' && renderBookings()}
-          {activeTab === 'browse' && renderBrowseRooms()}
-          {activeTab === 'new' && renderMakeBooking()}
-        </main>
       </div>
-      
-      {/* Receipt Modal */}
-      {showReceipt && receiptData && (
-        <div className="modal-overlay" onClick={closeReceipt}>
-          <div className="receipt-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="receipt-header">
-              <h2>Booking Receipt</h2>
-              <button className="close-btn" onClick={closeReceipt}>×</button>
-            </div>
-            <div className="receipt-content">
-              <div className="receipt-section">
-                <h3>Booking Details</h3>
-                <p><strong>Booking ID:</strong> #{receiptData.booking_id}</p>
-                <p><strong>Booking Date:</strong> {receiptData.booking_date}</p>
-                <p><strong>Status:</strong> <span className="status-badge status-pending">Pending</span></p>
-              </div>
-              
-              <div className="receipt-section">
-                <h3>Room Information</h3>
-                <p><strong>Room Number:</strong> {receiptData.room.room_number}</p>
-                <p><strong>Room Type:</strong> {receiptData.room.room_type}</p>
-                <p><strong>Room Description:</strong> {receiptData.room.description || 'N/A'}</p>
-              </div>
-              
-              <div className="receipt-section">
-                <h3>Stay Details</h3>
-                <p><strong>Check-in:</strong> {receiptData.check_in}</p>
-                <p><strong>Check-out:</strong> {receiptData.check_out}</p>
-                <p><strong>Duration:</strong> {Math.max(1, Math.floor((new Date(receiptData.check_out) - new Date(receiptData.check_in)) / (1000 * 60 * 60 * 24)))} nights</p>
-              </div>
-              
-              <div className="receipt-section">
-                <h3>Guest Information</h3>
-                <p><strong>Name:</strong> {receiptData.user.name || receiptData.user.email}</p>
-                <p><strong>Email:</strong> {receiptData.user.email}</p>
-              </div>
-              
-              <div className="receipt-section">
-                <h3>Payment Summary</h3>
-                <p><strong>Room Rate:</strong> ${receiptData.room.price}/night</p>
-                <p><strong>Nights:</strong> {Math.max(1, Math.floor((new Date(receiptData.check_out) - new Date(receiptData.check_in)) / (1000 * 60 * 60 * 24)))}</p>
-                <p><strong>Subtotal:</strong> ${(receiptData.room.price * Math.max(1, Math.floor((new Date(receiptData.check_out) - new Date(receiptData.check_in)) / (1000 * 60 * 60 * 24)))).toFixed(2)}</p>
-                <p><strong>Taxes & Fees:</strong> ${(receiptData.room.price * Math.max(1, Math.floor((new Date(receiptData.check_out) - new Date(receiptData.check_in)) / (1000 * 60 * 60 * 24)))*0.1).toFixed(2)}</p>
-                <div className="total-amount">
-                  <strong>Total Amount:</strong> ${(receiptData.room.price * Math.max(1, Math.floor((new Date(receiptData.check_out) - new Date(receiptData.check_in)) / (1000 * 60 * 60 * 24)))*1.1).toFixed(2)}
-                </div>
-              </div>
-            </div>
-            <div className="receipt-footer">
-              <p>Please keep this receipt for your records.</p>
-              <div className="receipt-actions">
-                <button className="btn btn-secondary" onClick={downloadReceiptAsPDF}>
-                  Download PDF
-                </button>
-                <button className="btn btn-primary" onClick={closeReceipt}>
-                  Close
-                </button>
-              </div>
-            </div>
+
+      <div className="dashboard-main">
+        <h2 style={{marginBottom: '25px', color: '#2d3748'}}>My Bookings</h2>
+        
+        {bookings.length === 0 ? (
+          <div style={{textAlign: 'center', padding: '40px', color: '#718096'}}>
+            <h3>You have no bookings yet</h3>
+            <p>Browse our properties and make your first reservation!</p>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="bookings-table">
+            <table style={{width: '100%', borderCollapse: 'collapse'}}>
+              <thead>
+                <tr style={{backgroundColor: '#f8f9fa'}}>
+                  <th style={{padding: '12px 15px', textAlign: 'left', borderBottom: '2px solid #e0e0e0'}}>Property</th>
+                  <th style={{padding: '12px 15px', textAlign: 'left', borderBottom: '2px solid #e0e0e0'}}>Check-in</th>
+                  <th style={{padding: '12px 15px', textAlign: 'left', borderBottom: '2px solid #e0e0e0'}}>Check-out</th>
+                  <th style={{padding: '12px 15px', textAlign: 'left', borderBottom: '2px solid #e0e0e0'}}>Guests</th>
+                  <th style={{padding: '12px 15px', textAlign: 'left', borderBottom: '2px solid #e0e0e0'}}>Total</th>
+                  <th style={{padding: '12px 15px', textAlign: 'left', borderBottom: '2px solid #e0e0e0'}}>Status</th>
+                  <th style={{padding: '12px 15px', textAlign: 'left', borderBottom: '2px solid #e0e0e0'}}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.map(booking => (
+                  <tr key={booking.booking_id} style={{borderBottom: '1px solid #e0e0e0'}}>
+                    <td style={{padding: '12px 15px'}}>
+                      <strong>{booking.room_type}</strong><br/>
+                      <small style={{color: '#666'}}>Room #{booking.room_number}</small>
+                    </td>
+                    <td style={{padding: '12px 15px'}}>{new Date(booking.check_in_date).toLocaleDateString()}</td>
+                    <td style={{padding: '12px 15px'}}>{new Date(booking.check_out_date).toLocaleDateString()}</td>
+                    <td style={{padding: '12px 15px'}}>{booking.guests}</td>
+                    <td style={{padding: '12px 15px'}}>${booking.total_amount}</td>
+                    <td style={{padding: '12px 15px'}}>
+                      <span className={`status-badge status-${booking.status.toLowerCase()}`}>
+                        {booking.status}
+                      </span>
+                    </td>
+                    <td style={{padding: '12px 15px'}}>
+                      {booking.status === 'Confirmed' && (
+                        <button 
+                          onClick={() => cancelBooking(booking.booking_id)}
+                          className="btn btn-secondary"
+                          style={{padding: '6px 12px', fontSize: '12px'}}
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
